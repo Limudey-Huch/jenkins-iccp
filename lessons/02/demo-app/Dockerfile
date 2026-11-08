@@ -1,5 +1,6 @@
 FROM python:3.12-slim
 WORKDIR /app
 COPY . .
-RUN pip install pytest
-CMD ["pytest", "--junitxml=results.xml"]
+RUN pip install pytest flask
+EXPOSE 5000
+CMD ["python", "web_app.py"]

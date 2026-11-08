@@ -4,9 +4,9 @@ In-class, instructor-led. This walkthrough deliberately does the *wrong* thing f
 ---
 
 ## Setup (before class)
-- Provision the throwaway IAM user and S3 bucket **as code** with the Terraform config committed at [`lessons/03/terraform`](terraform/) — not by clicking through the AWS Console:
+- Provision the throwaway IAM user and S3 bucket **as code** with the Terraform config committed at [`lessons/03/terraform`](terraform/) — not by clicking through the AWS Console. Replace `<path-to-jenkins-iccp>` below with wherever you placed this course folder on your machine:
   ```bash
-  cd ~/00_devops_course_iccp/jenkins-iccp/lessons/03/terraform
+  cd <path-to-jenkins-iccp>/lessons/03/terraform
   terraform init
   terraform apply
   terraform output bucket_name

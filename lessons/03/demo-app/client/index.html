@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Jewelry Orders</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>💍 Jewelry Order Desk</h1>
+
+  <section>
+    <h2>Catalog</h2>
+    <div id="catalog"></div>
+  </section>
+
+  <section>
+    <h2>Place an order</h2>
+    <form id="order-form">
+      <input id="customer-name" type="text" placeholder="Customer name" required>
+      <select id="item-select"></select>
+      <input id="item-quantity" type="number" min="1" value="1">
+      <button type="submit">Add & Submit Order</button>
+    </form>
+    <div id="order-result"></div>
+  </section>
+
+  <section>
+    <h2>Recent orders</h2>
+    <button id="refresh-orders">Refresh</button>
+    <table id="orders-table">
+      <thead>
+        <tr><th>ID</th><th>Customer</th><th>Total</th><th>Status</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

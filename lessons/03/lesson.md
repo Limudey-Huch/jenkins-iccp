@@ -57,10 +57,10 @@ The "suggested plugins" set installed during the initial Jenkins setup wizard (L
 ## 4. Hands-On: Storing AWS Credentials
 
 ### Provisioning the IAM user and bucket as code
-Rather than clicking through the AWS Console, this lesson provisions the throwaway IAM user and S3 bucket with Terraform, committed to this course's materials at [`lessons/03/terraform`](terraform/). Run it from the Jenkins VM (it already has `aws-cli` and `terraform` configured):
+Rather than clicking through the AWS Console, this lesson provisions the throwaway IAM user and S3 bucket with Terraform, committed to this course's materials at [`lessons/03/terraform`](terraform/). Run it from the Jenkins VM (it already has `aws-cli` and `terraform` configured). Replace `<path-to-jenkins-iccp>` with wherever you placed this course folder:
 
 ```bash
-cd ~/00_devops_course_iccp/jenkins-iccp/lessons/03/terraform
+cd <path-to-jenkins-iccp>/lessons/03/terraform
 terraform init
 terraform plan
 terraform apply

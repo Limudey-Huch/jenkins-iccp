@@ -1,0 +1,97 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = "us-east-1"
+        CLUSTER    = "jewelry-prod-cluster"
+        IMAGE_TAG  = "prod-${env.BUILD_NUMBER}"
+    }
+
+    // No triggers block — a production deploy starts only when a human
+    // clicks Build Now, same convention as Walkthrough 02.5.
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'docker build -t jewelry-server:$IMAGE_TAG ./server'
+                sh 'docker build -t jewelry-client:$IMAGE_TAG ./client'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'docker run --rm -v $WORKSPACE/server:/app -w /app jewelry-server:$IMAGE_TAG pytest test_orders_logic.py --junitxml=results.xml'
+            }
+            post {
+                always {
+                    junit 'server/results.xml'
+                }
+            }
+        }
+
+        stage('Security Scan') {
+            steps {
+                dependencyCheck additionalArguments: '--scan server/requirements.txt --format XML --out dependency-check-report', odcInstallationName: 'OWASP-DC'
+            }
+            post {
+                always {
+                    dependencyCheckPublisher pattern: 'dependency-check-report/dependency-check-report.xml'
+                }
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jewelry-prod-deploy']]) {
+                    sh '''
+                        SERVER_REPO=$(aws ecr describe-repositories --repository-names jewelry-server --region $AWS_REGION --query 'repositories[0].repositoryUri' --output text)
+                        CLIENT_REPO=$(aws ecr describe-repositories --repository-names jewelry-client --region $AWS_REGION --query 'repositories[0].repositoryUri' --output text)
+                        REGISTRY=$(echo $SERVER_REPO | cut -d/ -f1)
+
+                        aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $REGISTRY
+
+                        docker tag jewelry-server:$IMAGE_TAG $SERVER_REPO:$IMAGE_TAG
+                        docker tag jewelry-client:$IMAGE_TAG $CLIENT_REPO:$IMAGE_TAG
+                        docker push $SERVER_REPO:$IMAGE_TAG
+                        docker push $CLIENT_REPO:$IMAGE_TAG
+
+                        echo "$SERVER_REPO:$IMAGE_TAG" > server_image.txt
+                        echo "$CLIENT_REPO:$IMAGE_TAG" > client_image.txt
+                    '''
+                }
+            }
+        }
+
+        stage('Approval') {
+            steps {
+                input message: "Deploy build #${env.BUILD_NUMBER} to PRODUCTION?", ok: "Deploy"
+            }
+        }
+
+        stage('Deploy to Prod') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jewelry-prod-deploy']]) {
+                    sh '''
+                        python3 scripts/deploy_service.py --cluster $CLUSTER --service server --family jewelry-prod-server --container server --image $(cat server_image.txt)
+                        python3 scripts/deploy_service.py --cluster $CLUSTER --service client --family jewelry-prod-client --container client --image $(cat client_image.txt)
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Production deploy #${env.BUILD_NUMBER} succeeded."
+        }
+        failure {
+            echo "Production pipeline failed - nothing was deployed."
+        }
+    }
+}

@@ -1,0 +1,9 @@
+flask==3.0.0
+psycopg2-binary==2.9.9
+pytest==8.0.0
+
+# Pinned old on purpose — has a known CVE (CVE-2018-18074: credentials/auth
+# headers can leak to a different host on redirect). Used in the Lesson 03
+# "Security Scan" step to demonstrate OWASP Dependency-Check catching a real,
+# documented vulnerability in a dependency. Not otherwise required by the app.
+requests==2.19.1

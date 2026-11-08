@@ -1,0 +1,42 @@
+body {
+  font-family: sans-serif;
+  max-width: 700px;
+  margin: 40px auto;
+  background: #1e1e2e;
+  color: #eee;
+}
+
+h1, h2 { font-weight: 600; }
+
+section {
+  background: #2a2a3d;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+#catalog .item {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #3a3a52;
+}
+
+form { display: flex; gap: 8px; flex-wrap: wrap; }
+
+input, select, button {
+  padding: 8px;
+  border-radius: 6px;
+  border: none;
+}
+
+button {
+  background: #4f6df5;
+  color: white;
+  cursor: pointer;
+}
+
+table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #3a3a52; }
+
+#order-result { margin-top: 10px; font-weight: 600; }
