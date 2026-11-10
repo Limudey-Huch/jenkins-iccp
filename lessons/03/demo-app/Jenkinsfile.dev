@@ -35,7 +35,7 @@ pipeline {
         stage('Security Scan') {
             steps {
                 withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                    dependencyCheck additionalArguments: "--scan server/requirements.txt --format XML --out dependency-check-report --nvdApiKey ${NVD_API_KEY}", odcInstallation: 'OWASP-DC'
+                    dependencyCheck additionalArguments: "--scan server/requirements.txt --enableExperimental --format XML --out dependency-check-report --nvdApiKey ${NVD_API_KEY}", odcInstallation: 'OWASP-DC'
                 }
             }
             post {
@@ -72,8 +72,8 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jewelry-dev-deploy']]) {
                     sh '''
-                        python3 scripts/deploy_service.py --cluster $CLUSTER --service server --family jewelry-dev-server --container server --image $(cat server_image.txt)
-                        python3 scripts/deploy_service.py --cluster $CLUSTER --service client --family jewelry-dev-client --container client --image $(cat client_image.txt)
+                        python3 scripts/deploy_service.py --cluster $CLUSTER --service server --container server --image $(cat server_image.txt)
+                        python3 scripts/deploy_service.py --cluster $CLUSTER --service client --container client --image $(cat client_image.txt)
                     '''
                 }
             }

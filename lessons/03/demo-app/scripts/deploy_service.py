@@ -2,9 +2,9 @@
 """
 Deploys a new image to a running ECS Fargate service, without touching
 Terraform:
-  1. Reads the current task definition
+  1. Reads whatever task definition the SERVICE is actually running right now
   2. Replaces just the image for the named container
-  3. Registers a new task definition revision
+  3. Registers a new task definition revision from that
   4. Updates the service to use it
 
 Terraform owns the *shape* of the infrastructure (created once, manually, by
@@ -14,9 +14,21 @@ so the narrow jenkins-deploy-<env> IAM user only ever needs
 ecs:RegisterTaskDefinition / ecs:UpdateService / ecs:DescribeServices, never
 permission to create or change the infrastructure itself.
 
+Deliberately reads the task definition via `describe-services` (what the
+service is *actually* running), not `describe-task-definition --task-definition
+<family>` (the highest revision number ever registered in that family,
+regardless of whether anything is using it). Those two are NOT the same the
+moment two different things register revisions in the same family — Terraform
+creating a revision once, and this script creating a new one on every deploy,
+both bump the same family's revision counter independently. Reading "latest
+in family" instead of "what the service runs" is how a Terraform-set field
+(like `runtimePlatform`) silently gets lost forever: this script would keep
+cloning forward from whatever the highest revision number happens to be,
+which can easily be one of *its own* earlier outputs — never Terraform's.
+
 Usage:
   python3 deploy_service.py --cluster <cluster> --service <service> \\
-      --family <family> --container <container-name> --image <new-image-uri>
+      --container <container-name> --image <new-image-uri>
 """
 import argparse
 import json
@@ -32,6 +44,10 @@ ALLOWED_REGISTER_KEYS = [
     "cpu",
     "memory",
     "volumes",
+    # Without this, every deploy silently dropped whatever Terraform set
+    # here (e.g. ARM64), reverting new task definition revisions back to
+    # Fargate's X86_64 default — a real bug, not a hypothetical one.
+    "runtimePlatform",
 ]
 
 
@@ -44,12 +60,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cluster", required=True)
     parser.add_argument("--service", required=True)
-    parser.add_argument("--family", required=True)
     parser.add_argument("--container", required=True)
     parser.add_argument("--image", required=True)
     args = parser.parse_args()
 
-    current = run_aws(["ecs", "describe-task-definition", "--task-definition", args.family])
+    services = run_aws(["ecs", "describe-services", "--cluster", args.cluster, "--services", args.service])
+    current_arn = services["services"][0]["taskDefinition"]
+    print(f"Service '{args.service}' is currently running {current_arn}")
+
+    current = run_aws(["ecs", "describe-task-definition", "--task-definition", current_arn])
     task_def = current["taskDefinition"]
 
     found = False
@@ -58,7 +77,7 @@ def main():
             container["image"] = args.image
             found = True
     if not found:
-        raise SystemExit(f"No container named '{args.container}' in task definition '{args.family}'")
+        raise SystemExit(f"No container named '{args.container}' in task definition '{current_arn}'")
 
     register_args = {k: task_def[k] for k in ALLOWED_REGISTER_KEYS if k in task_def}
 
