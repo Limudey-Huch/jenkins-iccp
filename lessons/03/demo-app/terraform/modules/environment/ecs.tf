@@ -27,6 +27,16 @@ resource "aws_ecs_task_definition" "db" {
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution.arn
 
+  # Fargate defaults to X86_64. Images built on an ARM-based Jenkins host
+  # (e.g. Apple Silicon under virtualization) are ARM64-only, so every task
+  # definition here explicitly requests ARM64 Fargate capacity to match —
+  # native, no QEMU emulation needed, and ARM64 Fargate is slightly cheaper
+  # too. If your Jenkins build host is x86_64 instead, delete these blocks.
+  runtime_platform {
+    cpu_architecture        = "ARM64"
+    operating_system_family = "LINUX"
+  }
+
   container_definitions = jsonencode([
     {
       name         = "db"
@@ -78,6 +88,11 @@ resource "aws_ecs_task_definition" "server" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution.arn
+
+  runtime_platform {
+    cpu_architecture        = "ARM64"
+    operating_system_family = "LINUX"
+  }
 
   container_definitions = jsonencode([
     {
@@ -134,6 +149,11 @@ resource "aws_ecs_task_definition" "client" {
   cpu                      = "256"
   memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_execution.arn
+
+  runtime_platform {
+    cpu_architecture        = "ARM64"
+    operating_system_family = "LINUX"
+  }
 
   container_definitions = jsonencode([
     {

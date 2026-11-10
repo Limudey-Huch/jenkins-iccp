@@ -71,6 +71,15 @@ resource "aws_iam_user_policy" "jenkins_deploy" {
         Resource = "*"
       },
       {
+        # Also account-wide only (no resource-level support) — used by the
+        # Jenkinsfiles to build the ECR registry hostname (<account>.dkr.ecr.
+        # <region>.amazonaws.com) without needing ecr:DescribeRepositories.
+        Sid      = "AllowCallerIdentity"
+        Effect   = "Allow"
+        Action   = "sts:GetCallerIdentity"
+        Resource = "*"
+      },
+      {
         Sid    = "EcrPushToTheseReposOnly"
         Effect = "Allow"
         Action = [
@@ -79,6 +88,11 @@ resource "aws_iam_user_policy" "jenkins_deploy" {
           "ecr:InitiateLayerUpload",
           "ecr:UploadLayerPart",
           "ecr:CompleteLayerUpload",
+          # Read-only, but still needed for a *push*: modern Docker (BuildKit)
+          # attaches a provenance/attestation manifest to every image by
+          # default, and finishing that manifest requires reading back
+          # existing image data mid-push, not just writing new layers.
+          "ecr:BatchGetImage",
         ]
         Resource = [
           "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/jewelry-client",
@@ -91,6 +105,16 @@ resource "aws_iam_user_policy" "jenkins_deploy" {
         Sid      = "RegisterTaskDefinition"
         Effect   = "Allow"
         Action   = "ecs:RegisterTaskDefinition"
+        Resource = "*"
+      },
+      {
+        # Read-only, so scoped more loosely than the mutating actions above
+        # on purpose — Lesson 04 uses this so a "main" pipeline can look up
+        # what's currently running in an environment (e.g. "what server tag
+        # is live in dev right now?") before triggering a promotion.
+        Sid      = "DescribeTaskDefinitions"
+        Effect   = "Allow"
+        Action   = "ecs:DescribeTaskDefinition"
         Resource = "*"
       },
       {
